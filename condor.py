@@ -1,6 +1,6 @@
 from imp import new_module
 from os.path import split, splitext, join, dirname
-from cartopy.io import shapereader
+# from cartopy.io import shapereader
 from configparser import ConfigParser
 
 
@@ -57,14 +57,14 @@ class Coquimbo(condor):
             ax.add_geometries(self.border, crs=self.proj, facecolor='none', edgecolor='g', linewidth=.5, zorder=0)
             ax.set_extent((-72.2, -69.8, -32.5, -28.2), crs=self.proj)
 
-class sshfs_shapereader(shapereader.Reader):
-    def __init__(self, path, sshfs):
-        from shapefile import Reader
-        self._sshfs = {k: sshfs.openbin('.'.join((path, k))) for k in ['shp', 'shx', 'dbf']}
-        self._reader = Reader(**self._sshfs)
-        self._geometry_factory = shapereader.GEOMETRY_FACTORIES.get(self._reader.shapeType)
-        self._fields = self._reader.fields
+# class sshfs_shapereader(shapereader.Reader):
+#     def __init__(self, path, sshfs):
+#         from shapefile import Reader
+#         self._sshfs = {k: sshfs.openbin('.'.join((path, k))) for k in ['shp', 'shx', 'dbf']}
+#         self._reader = Reader(**self._sshfs)
+#         self._geometry_factory = shapereader.GEOMETRY_FACTORIES.get(self._reader.shapeType)
+#         self._fields = self._reader.fields
 
-    def __del__(self):
-        for f in self._sshfs.values():
-            f.close()
+#     def __del__(self):
+#         for f in self._sshfs.values():
+#             f.close()
