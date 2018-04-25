@@ -2,25 +2,25 @@ from mpi4py import MPI
 from netCDF4 import Dataset, num2date
 
 class Data(object):
+    """Open, read and attach - as :attr:`x` - a slice of netCDF data.
+
+    :param path: path to the netCDF file to open
+
+    Keyword arguments::
+
+        **var** - the variable in the netCDF dataset to read
+        **dim** - the dimension along which to slice the data (each processor gets len(dim) / nproc of the data)
+        **copy** - development hack to copy the data (``x``) over to a fresh instance of :class:`Data`
+
+    Either **var** and **dim** or **copy** are needed. Any additional **kwargs** should be in the form of ``name=slice()``, where **name** refers to a dimension name, and the corresponding slice will be applied to the read operation.
+
+    Attributes::
+
+        **x** - the data
+        **read_time** - the wall time needed to read the data
+
+    """
     def __init__(self, path=None, **kwargs):
-        """Open, read and attach - as :attr:`x` - a slice of netCDF data.
-
-        :param path: path to the netCDF file to open
-
-        Keyword arguments::
-
-            **var** - the variable in the netCDF dataset to read
-            **dim** - the dimension along which to slice the data (each processor gets len(dim) / nproc of the data)
-            **copy** - development hack to copy the data (``x``) over to a fresh instance of :class:`Data`
-
-        Either **var** and **dim** or **copy** are needed. Any additional **kwargs** should be in the form of ``name=slice()``, where **name** refers to a dimension name, and the corresponding slice will be applied to the read operation.
-
-        Attributes::
-
-            **x** - the data
-            **read_time** - the wall time needed to read the data
-
-        """
         if 'copy' in kwargs:
             copy = kwargs.pop('copy')
             for a in ['x', 'netcdf', 'var', 'mpi_dim', 'slices']:

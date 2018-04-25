@@ -4,10 +4,13 @@ from cartopy.io import shapereader
 from configparser import ConfigParser
 
 
+config_file = '/HPC/arno/general.cfg'
+"name of the config file"
+
 class condor(object):
     def __init__(self):
         self.config = ConfigParser()
-        self.config.read(join(dirname(__file__), 'condor.cfg'))
+        self.config.read(config_file)
 
 class module(condor):
     def github(self, path):
