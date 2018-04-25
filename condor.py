@@ -1,42 +1,47 @@
-from fs.sshfs import SSHFS
 from imp import new_module
-from os.path import split, splitext, join
+from os.path import split, splitext, join, dirname
 from cartopy.io import shapereader
-import requests
+from configparser import ConfigParser
 
 
-sshfs = SSHFS('localhost', 'arno', port=9000)
-base = '/home/arno/Documents/code/python'
+class condor(object):
+    def __init__(self):
+        self.config = ConfigParser()
+        self.config.read(join(dirname(__file__), 'condor.cfg'))
 
-def module(path):
-    m = new_module(splitext(split(path)[1])[0])
-    with sshfs.open(join(base, path)) as f:
-        exec(f.read(), m.__dict__)
-    return m
-
-class github(object):
-    base_url = 'https://raw.githubusercontent.com/betaplane/cezanne/master/python'
-    params = {'token': '94d8a968ec25e77ee2b7c2a5f44386cd7891af54'}
-
-    @classmethod
-    def module(cls, path):
-        r = requests.get(join(cls.base_url, path), params=cls.params)
+class module(condor):
+    def github(self, path):
+        import requests
+        gh = self.config['github']
+        r = requests.get(join(gh['path'], path), params={'token': gh['token']})
         m = new_module(splitext(split(path)[1])[0])
         exec(r.text, m.__dict__)
         return m
 
+    def sshfs(self, path):
+        from fs.sshfs import SSHFS
+        ssh = self.config['sshfs']
+        sshfs = SSHFS(ssh['host'], ssh['user'], port=ssh['port'])
+        m = new_module(splitext(split(path)[1])[0])
+        with sshfs.open(join(ssh['path'], path)) as f:
+            exec(f.read(), m.__dict__)
+        return m
 
-class Coquimbo(object):
-    path = '/home/arno/Documents/data/geo/GSHHG'
+class Coquimbo(condor):
     def __init__(self, proj=None):
+        super().__init__()
+        ssh = self.config['sshfs']
+        sshfs = SSHFS(ssh['host'], ssh['user'], port=ssh['port'])
+        path = self.config['GSHHG']['path']
+
         if proj is None:
             from cartopy import crs
             self.proj = crs.PlateCarree()
         else:
             self.proj = proj
-        self.coast = list(sshfs_shapereader(join(self.path, 'coast'), sshfs).geometries())
-        self.rivers = list(sshfs_shapereader(join(self.path, 'river'), sshfs).geometries())
-        self.border = list(sshfs_shapereader(join(self.path, 'border'), sshfs).geometries())
+        self.coast = list(sshfs_shapereader(join(path, 'coast'), sshfs).geometries())
+        self.rivers = list(sshfs_shapereader(join(path, 'river'), sshfs).geometries())
+        self.border = list(sshfs_shapereader(join(path, 'border'), sshfs).geometries())
 
     def __call__(self, ax, lines_only=False, colors=['k']):
         if lines_only:
