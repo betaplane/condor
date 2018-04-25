@@ -2,16 +2,50 @@ from imp import new_module
 from os.path import split, splitext, join, dirname
 # from cartopy.io import shapereader
 from configparser import ConfigParser
-import sys
+from importlib.machinery import ModuleSpec
+from importlib import import_module
+from types import ModuleType
+import sys, requests
 
 
 config_file = '/HPC/arno/general.cfg'
 "name of the config file"
 
-class condor(object):
+
+class config(object):
     def __init__(self):
         self.config = ConfigParser()
         self.config.read(config_file)
+
+class GitHubConnect(config):
+    def list(self, path):
+        json = import_module('json')
+        gh = self.config['github']
+        r = requests.get(gh['api'] + gh['cezanne'] + path)
+        return json.loads(r.text)
+
+class GithubImporter(object):
+    def find_spec(self, fullname, path, target=None):
+        print(fullname, path, target)
+        if fullname in ['WRF', 'interpolate', 'geo', 'data']:
+            self.config = ConfigParser()
+            self.config.read(config_file)
+            return ModuleSpec(fullname, self)
+        else: return None
+
+    def load_module(self, name):
+        print('load ', name)
+        m = ModuleType(name)
+        m.__path__ = 'test'
+        # requests = import_module('requests')
+        # gh = self.config['github']
+        # r = requests.get(join(gh['path'], '{}.py'.format(name)), params={'token': gh['token']})
+        # exec(r.text, m.__dict__)
+        sys.modules[name] = m
+        return sys.modules[name]
+
+sys.meta_path.append(GithubImporter())
+
 
 class module(condor):
     """Remotely load python modules, either from :meth:`github` or via :meth:`sshfs`. The remote paths and connection paramters are saved in the :attr:`config_file`.
