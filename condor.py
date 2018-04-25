@@ -2,6 +2,7 @@ from imp import new_module
 from os.path import split, splitext, join, dirname
 # from cartopy.io import shapereader
 from configparser import ConfigParser
+import sys
 
 
 config_file = '/HPC/arno/general.cfg'
@@ -13,15 +14,34 @@ class condor(object):
         self.config.read(config_file)
 
 class module(condor):
+    """Remotely load python modules, either from :meth:`github` or via :meth:`sshfs`. The remote paths and connection paramters are saved in the :attr:`config_file`.
+
+    """
     def github(self, path):
+        """Load module directly from github as text.
+
+        :param path: The path under the top-level github directory (e.g. ``data/WRF.py``).
+        :returns: The loaded module.
+        :rtype: :obj:`imp.module`
+
+        """
         import requests
         gh = self.config['github']
         r = requests.get(join(gh['path'], path), params={'token': gh['token']})
-        m = new_module(splitext(split(path)[1])[0])
+        name = splitext(split(path)[1])[0]
+        m = new_module(name)
         exec(r.text, m.__dict__)
-        return m
+        sys.modules[name] = m
+        # return m
 
     def sshfs(self, path):
+        """Load module via sshfs connection.
+
+        :param path: The path on the ssh server from which to load the module ('e.g. ``data/WRF.py``).
+        :returns: The loaded module.
+        :rtype: :obj:`imp.module`
+
+        """
         from fs.sshfs import SSHFS
         ssh = self.config['sshfs']
         sshfs = SSHFS(ssh['host'], ssh['user'], port=ssh['port'])
