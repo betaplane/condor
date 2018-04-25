@@ -32,7 +32,7 @@ class module(condor):
         m = new_module(name)
         exec(r.text, m.__dict__)
         sys.modules[name] = m
-        # return m
+        return m
 
     def sshfs(self, path):
         """Load module via sshfs connection.
@@ -45,9 +45,11 @@ class module(condor):
         from fs.sshfs import SSHFS
         ssh = self.config['sshfs']
         sshfs = SSHFS(ssh['host'], ssh['user'], port=ssh['port'])
-        m = new_module(splitext(split(path)[1])[0])
+        name = splitext(split(path)[1])[0]
+        m = new_module(name)
         with sshfs.open(join(ssh['path'], path)) as f:
             exec(f.read(), m.__dict__)
+        sys.modules[name] = m
         return m
 
 class Coquimbo(condor):
