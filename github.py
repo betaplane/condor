@@ -1,3 +1,12 @@
+"""
+Import machinery to load code directly from GitHub. Simply import condor.github, and subsequently import statements consider code from the repo with which :class:`GithubImporter` was initialized.
+
+.. Note::
+
+    * Not checking against sys.modules before loading the code right now - appears to be done by the machinery already.
+    * The *__path__* attribute on the module is normally a list - I use either a str or a dict, maybe that needs to be modified in the future.
+
+"""
 from . import config
 from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec
@@ -17,16 +26,6 @@ class GitHubConnect(config):
 
     def list2dict(self, text):
         return {os.path.splitext(f['name'])[0]: f for f in json.loads(text)}
-
-    def child(self, node):
-        if node['type'] == 'file':
-            name, ext = os.path.splitext(node['name'])
-            if ext == '.py':
-                self.files.append(name)
-            return {'type': 'file', 'url': node['download_url']}
-        else:
-            r = requests.get(node['_links']['self'])
-            return {'type': 'dir', 'content': self.list2dict(r.text)}
 
 class GithubImporter(GitHubConnect):
     def find_spec(self, fullname, path, target=None):

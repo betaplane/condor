@@ -1,3 +1,8 @@
+"""
+.. automodule:: condor.github
+    :members:
+
+"""
 from configparser import ConfigParser
 
 config_file = '/HPC/arno/general.cfg'
