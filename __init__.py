@@ -1,6 +1,6 @@
 from configparser import ConfigParser
 
-config_file = '/Users/arno/Documents/GitHub/condor/general.cfg'
+config_file = '/HPC/arno/general.cfg'
 "name of the config file"
 
 class config(object):
