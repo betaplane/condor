@@ -36,14 +36,12 @@ class GithubConnect(object):
         gh = config['github']
         self.params = {'token': gh['token']}
         api = requests.utils.urlparse(gh['api'])
+        self.user = gh['user'] if user is None else user
+        self.repo = gh['repo'] if repo is None else repo
+        self.folder = gh['folder'] if folder is None else folder
         self.netloc = api.netloc
         self.base_url = Url(api.scheme, host=api.netloc, path=os.path.join(
-            'repos',
-            gh['user'] if user is None else user,
-            gh['repo'] if repo is None else repo,
-            'contents',
-            gh['folder'] if folder is None else folder
-        )).url
+            'repos', self.user, self.repo, 'contents', self.folder)).url
         r = requests.get(self.base_url)
         assert r.ok, r.status_code
         self.base_folder = self.list2dict(r.text)
@@ -69,7 +67,7 @@ class GithubImporter(GithubConnect):
             return None
 
     def load_module(self, fullname):
-        print('loading {} from github'.format(fullname))
+        print('loading {} from github repo {}'.format(fullname, self.repo))
         if fullname != self.spec.name:
             return None
         mod = module_from_spec(self.spec)
