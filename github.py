@@ -9,6 +9,10 @@ Import machinery to load code directly from GitHub. Simply import condor.github,
     * Not checking against sys.modules before loading the code right now - appears to be done by the machinery already.
     * The *__path__* attribute on the module is normally a list - I use either a str or a dict, maybe that needs to be modified in the future.
 
+.. todo::
+
+    * set a __cached__ property (https://docs.python.org/3/library/importlib.html#importlib.abc.Loader.load_module)
+
 """
 from . import config
 from importlib.machinery import ModuleSpec
@@ -17,7 +21,16 @@ import sys, requests, os, json
 from urllib3.util import Url
 
 
-class GitHubConnect(object):
+class GithubConnect(object):
+    """Connection base class, currently only used by :class:`GithubImporter`. Initialises the attribute :attr:`base_folder` with contents of a specified directory in a repo on `GitHub <http://www.github.com>`_. Keywords that are not given are read from the global config file.
+
+    :Keyword arguments:
+
+        * **user** - GitHub user name
+        * **repo** - GitHub repo name
+        * **folder** - root folder within repo in which to anchor any search
+
+    """
     def __init__(self, user=None, repo=None, folder=None):
         super().__init__()
         gh = config['github']
@@ -34,19 +47,21 @@ class GitHubConnect(object):
         r = requests.get(self.base_url)
         assert r.ok, r.status_code
         self.base_folder = self.list2dict(r.text)
+        self.nodes = {}
 
     def list2dict(self, text):
         return {os.path.splitext(f['name'])[0]: f for f in json.loads(text)}
 
-class GithubImporter(GitHubConnect):
+class GithubImporter(GithubConnect):
+    """Module finder / loader for text files from a `GitHub <http://www.github.com>`_ repo. Init arguments are inherited from :class:`GithubConnect`.
+
+    """
     def find_spec(self, fullname, path, target=None):
-        base, _, name = fullname.rpartition('.')
-        node = path if isinstance(path, dict) else self.base_folder
-        if isinstance(path, str) and requests.utils.urlparse(path).netloc == self.netloc:
-            r = requests.get(path)
-            if r.ok:
-                node = self.list2dict(r.text)
-                sys.modules[base].__path__ = node
+        name = fullname.rpartition('.')[-1]
+        if path is None and fullname in self.base_folder:
+            node = self.base_folder
+        elif isinstance(path, str) and path in self.nodes:
+            node = self.nodes[path]
         try:
             self.spec = ModuleSpec(fullname, self, loader_state=node[name])
             return self.spec
@@ -61,11 +76,21 @@ class GithubImporter(GitHubConnect):
         mod.__name__ = fullname
         mod.__file__ = self.spec.loader_state['download_url']
         sys.modules[self.spec.name] = mod
-        if self.spec.loader_state['type'] == 'file':
+        if self.spec.loader_state['type'] == 'dir':
+            url = self.spec.loader_state['_links']['self']
+            if url in self.nodes:
+                node = self.nodes[url]
+            else:
+                r = requests.get(url)
+                if r.ok:
+                    node = self.list2dict(r.text)
+                    self.nodes[url] = node
+            mod.__path__ = url
+            mod.__package__ = fullname.rpartition('.')[0]
+            if '__init__' in node:
+                mod.__file__ = node['__init__']['download_url']
+        if mod.__file__ is not None:
             r = requests.get(mod.__file__, params=self.params)
             if r.ok:
                 exec(r.text, mod.__dict__)
-        else:
-            mod.__path__ = self.spec.loader_state['_links']['self']
-            mod.__package__ = fullname.rpartition('.')[0]
         return mod
