@@ -8,7 +8,7 @@ config = ConfigParser()
 config.read('/HPC/arno/general.cfg')
 
 def enable_github_import(*args, **kwargs):
-    """Call once in order to enable the direct import of modules from text files in a `GitHub <http://www.github.com`_ repo. This inserts an instance of :class:`~.github.GithubImporter` into the beginning of :attr:`sys.meta_path`. All arguments are directly passed to :class:`~.github.GithubConnect`.
+    """Call once in order to enable the direct import of modules from text files in a `GitHub <http://www.github.com>`_ repo. This inserts an instance of :class:`~.github.GithubImporter` into the beginning of :data:`sys.meta_path`. All arguments are directly passed to :class:`~.github.GithubConnect`.
 
     """
     import sys
@@ -18,7 +18,7 @@ def enable_github_import(*args, **kwargs):
     sys.meta_path.insert(0, github.GithubImporter(*args, **kwargs))
 
 def disable_github_import():
-    """Remove all instances of :class:`.github.GithubImporter` from :attr:`sys.meta_path`, thereby disabling the direct import of modules from a GitHub repo.
+    """Remove all instances of :class:`~.github.GithubImporter` from :data:`sys.meta_path`, thereby disabling the direct import of modules from a GitHub repo.
 
     """
     for mod in [m for m in sys.meta_path if isinstance(m, github.GithubImporter)]:

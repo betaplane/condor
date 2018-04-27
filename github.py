@@ -2,7 +2,7 @@
 GitHub
 ------
 
-Import machinery to load code directly from GitHub. Simply import condor.github, and subsequently import statements consider code from the repo with which :class:`GithubImporter` was initialized. The key statement is the ``sys.meta_path.append`` at the end of the file.
+Import machinery to load code directly from GitHub. Simply ``import condor`` and invoke :func:`.enable_github_import`, and subsequently import statements consider code from the repo with which :class:`GithubImporter` was initialized.
 
 .. Note::
 
