@@ -4,11 +4,12 @@
 
 """
 from configparser import ConfigParser
+config = ConfigParser()
+config.read('/HPC/arno/general.cfg')
 
-config_file = '/HPC/arno/general.cfg'
-"name of the config file"
-
-class config(object):
-    def __init__(self):
-        self.config = ConfigParser()
-        self.config.read(config_file)
+def enable_github_import(*args, **kwargs):
+    from . import github
+    import sys
+    # NOTE: appending the loader works in normal ipython, but trips up in jupyter notebooks
+    # (presumably because loaders earlier in the path return something unwanted)
+    sys.meta_path.insert(0, github.GithubImporter(*args, **kwargs))

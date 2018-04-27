@@ -1,5 +1,8 @@
 """
-Import machinery to load code directly from GitHub. Simply import condor.github, and subsequently import statements consider code from the repo with which :class:`GithubImporter` was initialized.
+GitHub
+------
+
+Import machinery to load code directly from GitHub. Simply import condor.github, and subsequently import statements consider code from the repo with which :class:`GithubImporter` was initialized. The key statement is the ``sys.meta_path.append`` at the end of the file.
 
 .. Note::
 
@@ -11,18 +14,26 @@ from . import config
 from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec
 import sys, requests, os, json
+from urllib3.util import Url
 
 
-class GitHubConnect(config):
-    def __init__(self, repo='cezanne', folder='python'):
+class GitHubConnect(object):
+    def __init__(self, user=None, repo=None, folder=None):
         super().__init__()
-        gh = self.config['github']
+        gh = config['github']
         self.params = {'token': gh['token']}
-        self.netloc = requests.utils.urlparse(gh['api']).netloc
-        self.base_url = gh['api'] + '/repos/' + gh['user'] + '/' + repo + '/contents/' + folder
+        api = requests.utils.urlparse(gh['api'])
+        self.netloc = api.netloc
+        self.base_url = Url(api.scheme, host=api.netloc, path=os.path.join(
+            'repos',
+            gh['user'] if user is None else user,
+            gh['repo'] if repo is None else repo,
+            'contents',
+            gh['folder'] if folder is None else folder
+        )).url
         r = requests.get(self.base_url)
-        if r.ok:
-            self.base_folder = self.list2dict(r.text)
+        assert r.ok, r.status_code
+        self.base_folder = self.list2dict(r.text)
 
     def list2dict(self, text):
         return {os.path.splitext(f['name'])[0]: f for f in json.loads(text)}
@@ -38,13 +49,12 @@ class GithubImporter(GitHubConnect):
                 sys.modules[base].__path__ = node
         try:
             self.spec = ModuleSpec(fullname, self, loader_state=node[name])
-            print(fullname, path)
             return self.spec
         except:
             return None
 
     def load_module(self, fullname):
-        print('load ', fullname)
+        print('loading {} from github'.format(fullname))
         if fullname != self.spec.name:
             return None
         mod = module_from_spec(self.spec)
@@ -59,5 +69,3 @@ class GithubImporter(GitHubConnect):
             mod.__path__ = self.spec.loader_state['_links']['self']
             mod.__package__ = fullname.rpartition('.')[0]
         return mod
-
-sys.meta_path.append(GithubImporter())
