@@ -4,15 +4,6 @@ GitHub
 
 Import machinery to load code directly from GitHub. Simply ``import condor`` and invoke :func:`.enable_github_import`, and subsequently import statements consider code from the repo with which :class:`GithubImporter` was initialized.
 
-.. Note::
-
-    * Not checking against sys.modules before loading the code right now - appears to be done by the machinery already.
-    * The *__path__* attribute on the module is normally a list - I use either a str or a dict, maybe that needs to be modified in the future.
-
-.. todo::
-
-    * set a __cached__ property (https://docs.python.org/3/library/importlib.html#importlib.abc.Loader.load_module)
-
 """
 from . import config
 from importlib.machinery import ModuleSpec
@@ -73,6 +64,7 @@ class GithubImporter(GithubConnect):
         mod = module_from_spec(self.spec)
         mod.__name__ = fullname
         mod.__file__ = self.spec.loader_state['download_url']
+        mod.__package__ = fullname.rpartition('.')[0]
         sys.modules[self.spec.name] = mod
         if self.spec.loader_state['type'] == 'dir':
             url = self.spec.loader_state['_links']['self']
@@ -84,7 +76,6 @@ class GithubImporter(GithubConnect):
                     node = self.list2dict(r.text)
                     self.nodes[url] = node
             mod.__path__ = url
-            mod.__package__ = fullname.rpartition('.')[0]
             if '__init__' in node:
                 mod.__file__ = node['__init__']['download_url']
         if mod.__file__ is not None:
