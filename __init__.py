@@ -48,7 +48,7 @@ def enable_sshfs_import(*args, **kwargs):
     # (presumably because loaders earlier in the path return something unwanted)
     sys.meta_path.insert(0, sshfs.sshfsImporter(*args, **kwargs))
 
-def disable_github_import():
+def disable_sshfs_import():
     """Remove all instances of :class:`~.github.GithubImporter` from :data:`sys.meta_path`, thereby disabling the direct import of modules from a GitHub repo.
 
     """
@@ -58,6 +58,4 @@ def disable_github_import():
 
 
 def reload(module):
-    from . import github, sshfs
-    if isinstance(module.__loader__, sshfs.sshfsImporter):
-        sshfs.reload(module)
+    module.__loader__.reload(module)

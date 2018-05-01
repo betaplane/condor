@@ -59,6 +59,7 @@ class sshfsImporter(sshfsConnect):
             sys.modules.pop(self.spec.name)
         return mod
 
-def reload(module):
-    with module.__loader__.sshfs.open(module.__file__) as f:
-        exec(f.read(), module.__dict__)
+    def reload(self, module):
+        with self.sshfs.open(module.__file__) as f:
+            exec(f.read(), module.__dict__)
+        print('reloaded {} from sshfs host {}'.format(module.__name__, self.host))
