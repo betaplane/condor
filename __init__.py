@@ -55,3 +55,9 @@ def disable_github_import():
     from . import sshfs
     for mod in [m for m in sys.meta_path if isinstance(m, sshfs.sshfsImporter)]:
         sys.meta_path.remove(mod)
+
+
+def reload(module):
+    from . import github, sshfs
+    if isinstance(module.__loader__, sshfs.sshfsImporter):
+        sshfs.reload(module)
