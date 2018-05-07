@@ -5,7 +5,7 @@ from fs.sshfs import SSHFS
 import sys, os
 
 class sshfsConnect(object):
-    def __init__(self, host=None, user=None, port=None, folder=None, **kwargs):
+    def __init__(self, host=None, user=None, port=None, folder=None, download=False, **kwargs):
         fs = config['sshfs']
         self.host = fs['host'] if host is None else host
         self.user = fs['user'] if user is None else user
@@ -14,6 +14,7 @@ class sshfsConnect(object):
         self.sshfs = SSHFS(self.host, self.user, port=self.port, **kwargs)
         self.base_folder = [os.path.splitext(f)[0] for f in self.sshfs.listdir(self.folder)]
         self.nodes = {}
+        self._dl = download
 
 class sshfsImporter(sshfsConnect):
     def find_spec(self, fullname, path, targ=None):
@@ -53,7 +54,15 @@ class sshfsImporter(sshfsConnect):
             mod.__file__ = '{}.py'.format(mod.__path__)
         try:
             with self.sshfs.open(mod.__file__) as f:
-                exec(f.read(), mod.__dict__)
+                s = f.read()
+                exec(s, mod.__dict__)
+                if self._dl:
+                    import pathlib as pl
+                    p = pl.Path('.{}'.format(mod.__file__[len(self.folder):]))
+                    mod.__file__ = p.as_posix()
+                    p.parent.mkdir(parents = True, exist_ok=True)
+                    with open(mod.__file__, 'w') as w:
+                        w.write(s)
         except:
             raise
             sys.modules.pop(self.spec.name)
