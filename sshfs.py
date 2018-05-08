@@ -1,3 +1,17 @@
+"""
+SSHFS
+-----
+
+Import machinery to load code directly over a ssh connection (either one initiated from the machine this module runs on or via local port forwarding when it is run on a remote machine)::
+
+    import condor
+    condor.enable_sshfs_import(port=...)
+
+Downloading of the remote files imported in a python session to the local filesystem is also supported via the ``download=True`` parameter to the :func:`.enable_sshfs_import` function of the parent module :mod:`condor`.
+
+.. _sshfs: https://github.com/althonos/fs.sshfs
+
+"""
 from . import config
 from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec
@@ -16,7 +30,7 @@ class sshfsConnect(object):
 
         All arguments that are not given will be searched for in the :data:`python.data.config` values.
 
-        Further kwargs are handed over to the `fs.sshfs.SSHFS <https://github.com/althonos/fs.sshfs>`_ instantiation.
+        Further kwargs are handed over to the `fs.sshfs.SSHFS <sshfs_>`_ instantiation.
 
     """
     def __init__(self, host=None, user=None, port=None, folder=None, download=False, **kwargs):
@@ -31,7 +45,7 @@ class sshfsConnect(object):
         self._dl = download
 
 class sshfsImporter(sshfsConnect):
-    """Class to import code directly via a ssh connection (with local port forwarded) by means of a regular import statement. Added to :data:`sys.meta_path` via the :meth:`.enable_sshfs_import` method of the :mod:`condor` package. All parameters given to that method are handed to :class:`.sshfsConnect`, where they are described.
+    """Class to import code directly via a ssh connection (with local port forwarded) by means of a regular import statement. Added to :data:`sys.meta_path` via the :func:`.enable_sshfs_import` method of the :mod:`condor` package. All parameters given to that method are handed to :class:`.sshfsConnect`, where they are described.
 
     """
     def find_spec(self, fullname, path, targ=None):
