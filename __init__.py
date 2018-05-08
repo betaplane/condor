@@ -12,6 +12,9 @@ Remote imports
     * set a __cached__ property (https://docs.python.org/3/library/importlib.html#importlib.abc.Loader.load_module)
     * maybe add a check that files are actually .py files
 
+.. automodule:: condor.sshfs
+    :members:
+
 .. automodule:: condor.github
     :members:
 
