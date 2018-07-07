@@ -1,5 +1,8 @@
 __pycache__
-/_static
+_static
 _templates
+_sources
 doctrees
 .buildinfo
+*.inv
+!/docs/_static
