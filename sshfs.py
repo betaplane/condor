@@ -2,6 +2,8 @@
 SSHFS
 -----
 
+.. _sshfs: https://github.com/althonos/fs.sshfs
+
 Import machinery to load code directly over a ssh connection (either one initiated from the machine this module runs on or via local port forwarding when it is run on a remote machine)::
 
     import condor
@@ -9,10 +11,12 @@ Import machinery to load code directly over a ssh connection (either one initiat
 
 Downloading of the remote files imported in a python session to the local filesystem is also supported via the ``download=True`` parameter to the :func:`.enable_sshfs_import` function of the parent module :mod:`condor`.
 
-.. _sshfs: https://github.com/althonos/fs.sshfs
+.. Warning::
+
+    While `fs.sshfs <sshfs_>`_ honors the ssh config file (can be given as parameter ``config_path``), at present, it doesn't seem to be working with proxy setups (however, in that case one can still set up local port forwarding and connect to localhost instead).
+
 
 """
-from . import config
 from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec
 from fs.sshfs import SSHFS
@@ -25,7 +29,7 @@ class sshfsConnect(object):
         * **host** - hostname (localhost in case of port forwarding)
         * **user** - username
         * **port** - port
-        * **folder** - folder on host machine where to root the import statements
+        * **path** - folder on host machine where to root the import statements
         * **download** (:obj:`bool`) - whether or not to download the imported files to the local filesystem (right now, it will download the directory tree to the folder from which executed)
 
         All arguments that are not given will be searched for in the :data:`python.data.config` values.
@@ -34,13 +38,19 @@ class sshfsConnect(object):
 
     """
     def __init__(self, host=None, user=None, port=None, folder=None, download=False, **kwargs):
-        fs = config['sshfs']
+        if not all((host, user, port, folder)):
+            if 'cezar' not in globals():
+                import runpy
+                fs = runpy.run_path(os.path.expanduser(os.environ['PYTHONSTARTUP']))['cezar']['sshfs']
+            else:
+                fs = cezar['sshfs']
+
         self.host = fs['host'] if host is None else host
         self.user = fs['user'] if user is None else user
         self.port = fs['port'] if port is None else port
-        self.folder = fs['path'] if folder is None else folder
+        self.path = fs['path'] if folder is None else folder
         self.sshfs = SSHFS(self.host, self.user, port=self.port, **kwargs)
-        self.base_folder = [os.path.splitext(f)[0] for f in self.sshfs.listdir(self.folder)]
+        self.base_folder = [os.path.splitext(f)[0] for f in self.sshfs.listdir(self.path)]
         self.nodes = {}
         self._dl = download
 
@@ -70,7 +80,7 @@ class sshfsImporter(sshfsConnect):
             return None
         mod = module_from_spec(self.spec)
         mod.__name__ = fullname
-        mod.__path__ = os.path.join(self.folder, *self.names)
+        mod.__path__ = os.path.join(self.path, *self.names)
         mod.__package__ = self.names[0]
         sys.modules[self.spec.name] = mod
         if self.sshfs.isdir(mod.__path__):
@@ -89,7 +99,7 @@ class sshfsImporter(sshfsConnect):
                 exec(s, mod.__dict__)
                 if self._dl:
                     import pathlib as pl
-                    p = pl.Path('.{}'.format(mod.__file__[len(self.folder):]))
+                    p = pl.Path('.{}'.format(mod.__file__[len(self.path):]))
                     mod.__file__ = p.as_posix()
                     p.parent.mkdir(parents = True, exist_ok=True)
                     with open(mod.__file__, 'w') as w:
@@ -103,3 +113,26 @@ class sshfsImporter(sshfsConnect):
         with self.sshfs.open(module.__file__) as f:
             exec(f.read(), module.__dict__)
         print('reloaded {} from sshfs host {}'.format(module.__name__, self.host))
+
+    def __del__(self):
+        self.sshfs.close()
+
+
+def enable_sshfs_import(*args, **kwargs):
+    """Call once in order to enable the direct import of modules from text files on a :mod:`fs.sshfs` filesystem. This inserts an instance of :class:`~.sshfs.sshfsImporter` into the beginning of :data:`sys.meta_path`. All arguments are directly passed to :class:`~.sshfs.sshfsConnect`.
+
+    """
+    # NOTE: appending the loader works in normal ipython, but trips up in jupyter notebooks
+    # (presumably because loaders earlier in the path return something unwanted)
+    sys.meta_path.insert(0, sshfsImporter(*args, **kwargs))
+
+def disable_sshfs_import():
+    """Remove all instances of :class:`~.github.GithubImporter` from :data:`sys.meta_path`, thereby disabling the direct import of modules from a GitHub repo.
+
+    """
+    for mod in [m for m in sys.meta_path if isinstance(m, sshfsImporter)]:
+        mod.sshfs.close() # to be on the safe side
+        sys.meta_path.remove(mod)
+
+def update_local_startup():
+    pass
