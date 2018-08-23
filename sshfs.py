@@ -10,7 +10,13 @@ Import machinery to load code directly over a ssh connection (either one initiat
     import condor
     condor.enable_sshfs_import(port=...)
 
-Downloading of the remote files imported in a python session to the local filesystem is also supported via the ``download=True`` parameter to the :func:`.enable_sshfs_import` function of the parent module :mod:`condor`.
+All parameters (see :class:`SSHFSConnect`) are configurable via the `traitlets  <https://traitlets.readthedocs.io/en/stable/config.html>`_ mechanism, i.e. they can be set via a config file, ``__init__`` arguments, or `the command line <https://traitlets.readthedocs.io/en/stable/config.html#command-line-arguments>`_.
+Downloading of the remote files imported in a python session to the local filesystem is also supported via the :attr:`download` trait (arguments to :func:`.enable_sshfs_import` will be handed up to :class:`SSHFSConnect`).
+
+Script Running
+==============
+
+Running scripts is supported via the :class:`SSHFSRunner` class, which uses the `subcommand <https://traitlets.readthedocs.io/en/stable/config.html#subcommands>`_ mechanism. Subcommands can be configured via a file, either loaded via sshfs or locally. To use the runner, simply execute this file as a script with the desired subcommand and command-line options.
 
 .. Warning::
 
@@ -30,22 +36,28 @@ class SSHFSConnect(Application):
     """Connection instance used by :class:`.SSHFSImporter`.
 
     :Keyword arguments:
-        * **host** - hostname (localhost in case of port forwarding)
-        * **user** - username
-        * **port** - port
-        * **path** - folder on host machine where to root the import statements
-        * **download** (:obj:`bool`) - whether or not to download the imported files to the local filesystem (right now, it will download the directory tree to the folder from which executed)
-
-        All arguments that are not given will be searched for in the :data:`python.data.config` values.
-
-        Further kwargs are handed over to the `fs.sshfs.SSHFS <sshfs_>`_ instantiation.
+        All of these can also be set via a config file or command-line args (see module docstring)
+        * :attr:`host`
+        * :attr:`user`
+        * :attr:`port`
+        * :attr:`path`
+        * :attr:`download`
 
     """
     host = Unicode('localhost').tag(config=True)
+    """sshfs hostname (localhost in case of port forwarding)"""
+
     user = Unicode().tag(config=True)
+    """sshfs username"""
+
     port = Integer().tag(config=True)
+    """sshfs port (possibly forwarded one)"""
+
     path = Unicode().tag(config=True)
+    """path on host from which the import statements should be executed"""
+
     download = Bool(False).tag(config=True)
+    """whether or not to download the imported files to the local filesystem (right now, it will download the directory tree to the folder from which executed)"""
 
     def __init__(self, *args, sshfs_kw={}, **kwargs):
         super().__init__(*args, **kwargs)
@@ -55,7 +67,7 @@ class SSHFSConnect(Application):
         self.nodes = {}
 
 class SSHFSImporter(SSHFSConnect):
-    """Class to import code directly via a ssh connection (with local port forwarded) by means of a regular import statement. Added to :data:`sys.meta_path` via the :func:`.enable_sshfs_import` method of the :mod:`condor` package. All parameters given to that method are handed to :class:`.SSHFSConnect`, where they are described.
+    """Class to import code directly via a ssh connection (with local port forwarded) by means of a regular import statement. Added to :data:`sys.meta_path` via the :func:`.enable_sshfs_import` method of the :mod:`condor` package. All parameters are described under :class:`.SSHFSConnect`.
 
     """
     _id = 'condor.SSHFSImporter' # hack to overcome isinstance problems
@@ -157,18 +169,24 @@ def get_sshfs():
 
 
 class SSHFSRunner(Application):
+    """Script runner class with loads a class as a traitlet subcommand via sshfs and executes its :meth:`start` method. Mostly inteded to be run as a command-line application - it is the entry point when this file is run as a script."""
+
     subcommands = Dict().tag(config=True)
+    """Subcommands defined as a mapping <command: class>, with the class being loadable via sshfs."""
+
     sshfs_config = Unicode().tag(config=True)
+    """Config file path on the target sshfs host, if needed. Subcommands can also be defined here."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args,  **kwargs)
         self.load_config_file('config.py', os.path.dirname(os.path.realpath(__file__)))
-        loader = import_module('traitlets.config.loader')
-        c = loader.ConfigLoader()
-        c.clear() # creates config instance
-        exec(get_sshfs().open(self.sshfs_config).read(),
-             {'c': c.config, 'get_config': lambda: c.config})
-        self.update_config(c.config)
+        if self.sshfs_config != '':
+            loader = import_module('traitlets.config.loader')
+            c = loader.ConfigLoader()
+            c.clear() # creates config instance
+            exec(get_sshfs().open(self.sshfs_config).read(),
+                 {'c': c.config, 'get_config': lambda: c.config})
+            self.update_config(c.config)
 
 
 if __name__ == '__main__':
