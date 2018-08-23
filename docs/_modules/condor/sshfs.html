@@ -33,7 +33,8 @@
           <div class="body" role="main">
             
   <h1>Source code for condor.sshfs</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">SSHFS</span>
 <span class="sd">-----</span>
 
@@ -44,7 +45,13 @@
 <span class="sd">    import condor</span>
 <span class="sd">    condor.enable_sshfs_import(port=...)</span>
 
-<span class="sd">Downloading of the remote files imported in a python session to the local filesystem is also supported via the ``download=True`` parameter to the :func:`.enable_sshfs_import` function of the parent module :mod:`condor`.</span>
+<span class="sd">All parameters (see :class:`SSHFSConnect`) are configurable via the `traitlets  &lt;https://traitlets.readthedocs.io/en/stable/config.html&gt;`_ mechanism, i.e. they can be set via a config file, ``__init__`` arguments, or `the command line &lt;https://traitlets.readthedocs.io/en/stable/config.html#command-line-arguments&gt;`_.</span>
+<span class="sd">Downloading of the remote files imported in a python session to the local filesystem is also supported via the :attr:`download` trait (arguments to :func:`.enable_sshfs_import` will be handed up to :class:`SSHFSConnect`).</span>
+
+<span class="sd">Script Running</span>
+<span class="sd">==============</span>
+
+<span class="sd">Running scripts is supported via the :class:`SSHFSRunner` class, which uses the `subcommand &lt;https://traitlets.readthedocs.io/en/stable/config.html#subcommands&gt;`_ mechanism. Subcommands can be configured via a file, either loaded via sshfs or locally. To use the runner, simply execute this file as a script with the desired subcommand and command-line options.</span>
 
 <span class="sd">.. Warning::</span>
 
@@ -54,45 +61,52 @@
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span> <span class="nn">importlib.machinery</span> <span class="k">import</span> <span class="n">ModuleSpec</span>
 <span class="kn">from</span> <span class="nn">importlib.util</span> <span class="k">import</span> <span class="n">module_from_spec</span>
+<span class="kn">from</span> <span class="nn">importlib</span> <span class="k">import</span> <span class="n">import_module</span>
+<span class="kn">from</span> <span class="nn">traitlets.config</span> <span class="k">import</span> <span class="n">Application</span>
+<span class="kn">from</span> <span class="nn">traitlets</span> <span class="k">import</span> <span class="n">Unicode</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">Bool</span><span class="p">,</span> <span class="n">Dict</span>
 <span class="kn">from</span> <span class="nn">fs.sshfs</span> <span class="k">import</span> <span class="n">SSHFS</span>
 <span class="kn">import</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">os</span>
 
-<div class="viewcode-block" id="sshfsConnect"><a class="viewcode-back" href="../../condor.html#condor.sshfsConnect">[docs]</a><span class="k">class</span> <span class="nc">sshfsConnect</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Connection instance used by :class:`.sshfsImporter`.</span>
+<div class="viewcode-block" id="SSHFSConnect"><a class="viewcode-back" href="../../condor.html#condor.SSHFSConnect">[docs]</a><span class="k">class</span> <span class="nc">SSHFSConnect</span><span class="p">(</span><span class="n">Application</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Connection instance used by :class:`.SSHFSImporter`.</span>
 
 <span class="sd">    :Keyword arguments:</span>
-<span class="sd">        * **host** - hostname (localhost in case of port forwarding)</span>
-<span class="sd">        * **user** - username</span>
-<span class="sd">        * **port** - port</span>
-<span class="sd">        * **path** - folder on host machine where to root the import statements</span>
-<span class="sd">        * **download** (:obj:`bool`) - whether or not to download the imported files to the local filesystem (right now, it will download the directory tree to the folder from which executed)</span>
-
-<span class="sd">        All arguments that are not given will be searched for in the :data:`python.data.config` values.</span>
-
-<span class="sd">        Further kwargs are handed over to the `fs.sshfs.SSHFS &lt;sshfs_&gt;`_ instantiation.</span>
+<span class="sd">        All of these can also be set via a config file or command-line args (see module docstring)</span>
+<span class="sd">        * :attr:`host`</span>
+<span class="sd">        * :attr:`user`</span>
+<span class="sd">        * :attr:`port`</span>
+<span class="sd">        * :attr:`path`</span>
+<span class="sd">        * :attr:`download`</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">folder</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">((</span><span class="n">host</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">folder</span><span class="p">)):</span>
-            <span class="k">if</span> <span class="s1">&#39;cezar&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">globals</span><span class="p">():</span>
-                <span class="kn">import</span> <span class="nn">runpy</span>
-                <span class="n">fs</span> <span class="o">=</span> <span class="n">runpy</span><span class="o">.</span><span class="n">run_path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;PYTHONSTARTUP&#39;</span><span class="p">]))[</span><span class="s1">&#39;cezar&#39;</span><span class="p">][</span><span class="s1">&#39;sshfs&#39;</span><span class="p">]</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">fs</span> <span class="o">=</span> <span class="n">cezar</span><span class="p">[</span><span class="s1">&#39;sshfs&#39;</span><span class="p">]</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="n">Unicode</span><span class="p">(</span><span class="s1">&#39;localhost&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">tag</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="sd">&quot;&quot;&quot;sshfs hostname (localhost in case of port forwarding)&quot;&quot;&quot;</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">fs</span><span class="p">[</span><span class="s1">&#39;host&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">host</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">host</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">user</span> <span class="o">=</span> <span class="n">fs</span><span class="p">[</span><span class="s1">&#39;user&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">user</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">user</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">fs</span><span class="p">[</span><span class="s1">&#39;port&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">port</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">port</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">fs</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">folder</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">folder</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">sshfs</span> <span class="o">=</span> <span class="n">SSHFS</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">Unicode</span><span class="p">()</span><span class="o">.</span><span class="n">tag</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="sd">&quot;&quot;&quot;sshfs username&quot;&quot;&quot;</span>
+
+    <span class="n">port</span> <span class="o">=</span> <span class="n">Integer</span><span class="p">()</span><span class="o">.</span><span class="n">tag</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="sd">&quot;&quot;&quot;sshfs port (possibly forwarded one)&quot;&quot;&quot;</span>
+
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Unicode</span><span class="p">()</span><span class="o">.</span><span class="n">tag</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="sd">&quot;&quot;&quot;path on host from which the import statements should be executed&quot;&quot;&quot;</span>
+
+    <span class="n">download</span> <span class="o">=</span> <span class="n">Bool</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">tag</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="sd">&quot;&quot;&quot;whether or not to download the imported files to the local filesystem (right now, it will download the directory tree to the folder from which executed)&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">sshfs_kw</span><span class="o">=</span><span class="p">{},</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_config_file</span><span class="p">(</span><span class="s1">&#39;config.py&#39;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sshfs</span> <span class="o">=</span> <span class="n">SSHFS</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="o">**</span><span class="n">sshfs_kw</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">base_folder</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">f</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sshfs</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_dl</span> <span class="o">=</span> <span class="n">download</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span> <span class="o">=</span> <span class="p">{}</span></div>
 
-<div class="viewcode-block" id="sshfsImporter"><a class="viewcode-back" href="../../condor.html#condor.sshfsImporter">[docs]</a><span class="k">class</span> <span class="nc">sshfsImporter</span><span class="p">(</span><span class="n">sshfsConnect</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Class to import code directly via a ssh connection (with local port forwarded) by means of a regular import statement. Added to :data:`sys.meta_path` via the :func:`.enable_sshfs_import` method of the :mod:`condor` package. All parameters given to that method are handed to :class:`.sshfsConnect`, where they are described.</span>
+<div class="viewcode-block" id="SSHFSImporter"><a class="viewcode-back" href="../../condor.html#condor.SSHFSImporter">[docs]</a><span class="k">class</span> <span class="nc">SSHFSImporter</span><span class="p">(</span><span class="n">SSHFSConnect</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class to import code directly via a ssh connection (with local port forwarded) by means of a regular import statement. Added to :data:`sys.meta_path` via the :func:`.enable_sshfs_import` method of the :mod:`condor` package. All parameters are described under :class:`.SSHFSConnect`.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_id</span> <span class="o">=</span> <span class="s1">&#39;condor.SSHFSImporter&#39;</span> <span class="c1"># hack to overcome isinstance problems</span>
+
     <span class="k">def</span> <span class="nf">find_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fullname</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">targ</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">names</span> <span class="o">=</span> <span class="n">fullname</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">fullname</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_folder</span><span class="p">:</span>
@@ -132,7 +146,7 @@
             <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">sshfs</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">mod</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
                 <span class="n">s</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
                 <span class="n">exec</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">mod</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dl</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">download</span><span class="p">:</span>
                     <span class="kn">import</span> <span class="nn">pathlib</span> <span class="k">as</span> <span class="nn">pl</span>
                     <span class="n">p</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="s1">&#39;.</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mod</span><span class="o">.</span><span class="vm">__file__</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">):]))</span>
                     <span class="n">mod</span><span class="o">.</span><span class="vm">__file__</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
@@ -150,27 +164,76 @@
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;reloaded </span><span class="si">{}</span><span class="s1"> from sshfs host </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">sshfs</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sshfs</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span> <span class="k">pass</span></div>
 
+<span class="k">class</span> <span class="nc">SSHFSImportDisabled</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
 
 <div class="viewcode-block" id="enable_sshfs_import"><a class="viewcode-back" href="../../condor.html#condor.enable_sshfs_import">[docs]</a><span class="k">def</span> <span class="nf">enable_sshfs_import</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Call once in order to enable the direct import of modules from text files on a :mod:`fs.sshfs` filesystem. This inserts an instance of :class:`~.sshfs.sshfsImporter` into the beginning of :data:`sys.meta_path`. All arguments are directly passed to :class:`~.sshfs.sshfsConnect`.</span>
+    <span class="sd">&quot;&quot;&quot;Call once in order to enable the direct import of modules from text files on a :mod:`fs.sshfs` filesystem. This inserts an instance of :class:`~.sshfs.SSHFSImporter` into the beginning of :data:`sys.meta_path`. All arguments are directly passed to :class:`~.sshfs.SSHFSConnect`.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># NOTE: appending the loader works in normal ipython, but trips up in jupyter notebooks</span>
     <span class="c1"># (presumably because loaders earlier in the path return something unwanted)</span>
-    <span class="n">sys</span><span class="o">.</span><span class="n">meta_path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">sshfsImporter</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span></div>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">disable_sshfs_import</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">SSHFSImportDisabled</span><span class="p">:</span> <span class="k">pass</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">meta_path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">SSHFSImporter</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span></div>
 
 <div class="viewcode-block" id="disable_sshfs_import"><a class="viewcode-back" href="../../condor.html#condor.disable_sshfs_import">[docs]</a><span class="k">def</span> <span class="nf">disable_sshfs_import</span><span class="p">():</span>
-    <span class="sd">&quot;&quot;&quot;Remove all instances of :class:`~.github.GithubImporter` from :data:`sys.meta_path`, thereby disabling the direct import of modules from a GitHub repo.</span>
+    <span class="sd">&quot;&quot;&quot;Remove all instances of :class:`~.sshfs.SSHFSImporter` from :data:`sys.meta_path`, thereby disabling the direct import of modules from a GitHub repo.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">for</span> <span class="n">mod</span> <span class="ow">in</span> <span class="p">[</span><span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">meta_path</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">sshfsImporter</span><span class="p">)]:</span>
-        <span class="n">mod</span><span class="o">.</span><span class="n">sshfs</span><span class="o">.</span><span class="n">close</span><span class="p">()</span> <span class="c1"># to be on the safe side</span>
-        <span class="n">sys</span><span class="o">.</span><span class="n">meta_path</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span></div>
+    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">meta_path</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">_id</span> <span class="o">==</span> <span class="s1">&#39;condor.SSHFSImporter&#39;</span><span class="p">:</span>
+                <span class="n">m</span><span class="o">.</span><span class="n">sshfs</span><span class="o">.</span><span class="n">close</span><span class="p">()</span> <span class="c1"># to be on the safe side</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">meta_path</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span> <span class="k">raise</span> <span class="n">SSHFSImportDisabled</span></div>
 
-<span class="k">def</span> <span class="nf">update_local_startup</span><span class="p">():</span>
-    <span class="k">pass</span>
+<span class="k">def</span> <span class="nf">get_sshfs</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Get the connected :class:`fs.sshfs.SSHFS` instance of an installed :class:`SSHFSImporter`.&quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">meta_path</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">_id</span> <span class="o">==</span> <span class="s1">&#39;condor.SSHFSImporter&#39;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">m</span><span class="o">.</span><span class="n">sshfs</span>
+        <span class="k">except</span><span class="p">:</span> <span class="k">pass</span>
+    <span class="k">raise</span> <span class="n">SSHFSImportDisabled</span><span class="p">(</span><span class="s1">&#39;no SSHFSImporter installed, run enable_sshfs_import() first&#39;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">SSHFSRunner</span><span class="p">(</span><span class="n">Application</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Script runner class with loads a class as a traitlet subcommand via sshfs and executes its :meth:`start` method. Mostly inteded to be run as a command-line application - it is the entry point when this file is run as a script.&quot;&quot;&quot;</span>
+
+    <span class="n">subcommands</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">()</span><span class="o">.</span><span class="n">tag</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="sd">&quot;&quot;&quot;Subcommands defined as a mapping &lt;command: class&gt;, with the class being loadable via sshfs.&quot;&quot;&quot;</span>
+
+    <span class="n">sshfs_config</span> <span class="o">=</span> <span class="n">Unicode</span><span class="p">()</span><span class="o">.</span><span class="n">tag</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="sd">&quot;&quot;&quot;Config file path on the target sshfs host, if needed. Subcommands can also be defined here.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span>  <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_config_file</span><span class="p">(</span><span class="s1">&#39;config.py&#39;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)))</span>
+
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">parse_command_line</span><span class="p">()</span>
+        <span class="n">imptr</span> <span class="o">=</span> <span class="n">SSHFSImporter</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">meta_path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">imptr</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sshfs_config</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">loader</span> <span class="o">=</span> <span class="n">import_module</span><span class="p">(</span><span class="s1">&#39;traitlets.config.loader&#39;</span><span class="p">)</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">ConfigLoader</span><span class="p">()</span>
+            <span class="n">c</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span> <span class="c1"># creates config instance</span>
+            <span class="n">exec</span><span class="p">(</span><span class="n">imptr</span><span class="o">.</span><span class="n">sshfs</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sshfs_config</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span>
+                 <span class="p">{</span><span class="s1">&#39;c&#39;</span><span class="p">:</span> <span class="n">c</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="s1">&#39;get_config&#39;</span><span class="p">:</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">c</span><span class="o">.</span><span class="n">config</span><span class="p">})</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_config</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">SSHFSRunner</span><span class="p">()</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">subapp</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 </pre></div>
 
           </div>

@@ -20,7 +20,7 @@ Remote imports
 .. autofunction:: condor.disable_github_import
 
 .. automodule:: condor.sshfs
-    :members: sshfsConnect, sshfsImporter
+    :members: SSHFSConnect, SSHFSImporter
 
 .. automodule:: condor.github
     :members: GithubConnect, GithubImporter

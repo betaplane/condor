@@ -149,17 +149,18 @@ def enable_sshfs_import(*args, **kwargs):
         sys.meta_path.insert(0, SSHFSImporter(*args, **kwargs))
 
 def disable_sshfs_import():
-    """Remove all instances of :class:`~.github.GithubImporter` from :data:`sys.meta_path`, thereby disabling the direct import of modules from a GitHub repo.
+    """Remove all instances of :class:`~.sshfs.SSHFSImporter` from :data:`sys.meta_path`, thereby disabling the direct import of modules from a GitHub repo.
 
     """
     for m in sys.meta_path:
         try:
             if m._id == 'condor.SSHFSImporter':
-                mod.sshfs.close() # to be on the safe side
-                sys.meta_path.remove(mod)
+                m.sshfs.close() # to be on the safe side
+                sys.meta_path.remove(m)
         except: raise SSHFSImportDisabled
 
 def get_sshfs():
+    """Get the connected :class:`fs.sshfs.SSHFS` instance of an installed :class:`SSHFSImporter`."""
     for m in sys.meta_path:
         try:
             if m._id == 'condor.SSHFSImporter':
@@ -180,17 +181,21 @@ class SSHFSRunner(Application):
     def __init__(self, *args, **kwargs):
         super().__init__(*args,  **kwargs)
         self.load_config_file('config.py', os.path.dirname(os.path.realpath(__file__)))
+
+    def initialize(self):
+        app.parse_command_line()
+        imptr = SSHFSImporter(config=self.config)
+        sys.meta_path.insert(0, imptr)
         if self.sshfs_config != '':
             loader = import_module('traitlets.config.loader')
             c = loader.ConfigLoader()
             c.clear() # creates config instance
-            exec(get_sshfs().open(self.sshfs_config).read(),
+            exec(imptr.sshfs.open(self.sshfs_config).read(),
                  {'c': c.config, 'get_config': lambda: c.config})
             self.update_config(c.config)
 
 
 if __name__ == '__main__':
-    enable_sshfs_import()
     app = SSHFSRunner()
-    app.parse_command_line()
+    app.initialize()
     app.subapp.start()

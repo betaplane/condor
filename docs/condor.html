@@ -55,13 +55,13 @@
 <dl class="function">
 <dt id="condor.enable_sshfs_import">
 <code class="descclassname">condor.</code><code class="descname">enable_sshfs_import</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/condor/sshfs.html#enable_sshfs_import"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#condor.enable_sshfs_import" title="Permalink to this definition">¶</a></dt>
-<dd><p>Call once in order to enable the direct import of modules from text files on a <code class="xref py py-mod docutils literal notranslate"><span class="pre">fs.sshfs</span></code> filesystem. This inserts an instance of <a class="reference internal" href="#condor.sshfs.sshfsImporter" title="condor.sshfs.sshfsImporter"><code class="xref py py-class docutils literal notranslate"><span class="pre">sshfsImporter</span></code></a> into the beginning of <a class="reference external" href="https://docs.python.org/3/library/sys.html#sys.meta_path" title="(in Python v3.7)"><code class="xref py py-data docutils literal notranslate"><span class="pre">sys.meta_path</span></code></a>. All arguments are directly passed to <a class="reference internal" href="#condor.sshfs.sshfsConnect" title="condor.sshfs.sshfsConnect"><code class="xref py py-class docutils literal notranslate"><span class="pre">sshfsConnect</span></code></a>.</p>
+<dd><p>Call once in order to enable the direct import of modules from text files on a <code class="xref py py-mod docutils literal notranslate"><span class="pre">fs.sshfs</span></code> filesystem. This inserts an instance of <a class="reference internal" href="#condor.sshfs.SSHFSImporter" title="condor.sshfs.SSHFSImporter"><code class="xref py py-class docutils literal notranslate"><span class="pre">SSHFSImporter</span></code></a> into the beginning of <a class="reference external" href="https://docs.python.org/3/library/sys.html#sys.meta_path" title="(in Python v3.7)"><code class="xref py py-data docutils literal notranslate"><span class="pre">sys.meta_path</span></code></a>. All arguments are directly passed to <a class="reference internal" href="#condor.sshfs.SSHFSConnect" title="condor.sshfs.SSHFSConnect"><code class="xref py py-class docutils literal notranslate"><span class="pre">SSHFSConnect</span></code></a>.</p>
 </dd></dl>
 
 <dl class="function">
 <dt id="condor.disable_sshfs_import">
 <code class="descclassname">condor.</code><code class="descname">disable_sshfs_import</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/condor/sshfs.html#disable_sshfs_import"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#condor.disable_sshfs_import" title="Permalink to this definition">¶</a></dt>
-<dd><p>Remove all instances of <a class="reference internal" href="#condor.github.GithubImporter" title="condor.github.GithubImporter"><code class="xref py py-class docutils literal notranslate"><span class="pre">GithubImporter</span></code></a> from <a class="reference external" href="https://docs.python.org/3/library/sys.html#sys.meta_path" title="(in Python v3.7)"><code class="xref py py-data docutils literal notranslate"><span class="pre">sys.meta_path</span></code></a>, thereby disabling the direct import of modules from a GitHub repo.</p>
+<dd><p>Remove all instances of <a class="reference internal" href="#condor.sshfs.SSHFSImporter" title="condor.sshfs.SSHFSImporter"><code class="xref py py-class docutils literal notranslate"><span class="pre">SSHFSImporter</span></code></a> from <a class="reference external" href="https://docs.python.org/3/library/sys.html#sys.meta_path" title="(in Python v3.7)"><code class="xref py py-data docutils literal notranslate"><span class="pre">sys.meta_path</span></code></a>, thereby disabling the direct import of modules from a GitHub repo.</p>
 </dd></dl>
 
 <dl class="function">
@@ -83,41 +83,72 @@
 <span class="n">condor</span><span class="o">.</span><span class="n">enable_sshfs_import</span><span class="p">(</span><span class="n">port</span><span class="o">=...</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Downloading of the remote files imported in a python session to the local filesystem is also supported via the <code class="docutils literal notranslate"><span class="pre">download=True</span></code> parameter to the <a class="reference internal" href="#condor.enable_sshfs_import" title="condor.enable_sshfs_import"><code class="xref py py-func docutils literal notranslate"><span class="pre">enable_sshfs_import()</span></code></a> function of the parent module <a class="reference internal" href="#module-condor" title="condor"><code class="xref py py-mod docutils literal notranslate"><span class="pre">condor</span></code></a>.</p>
+<p>All parameters (see <a class="reference internal" href="#condor.sshfs.SSHFSConnect" title="condor.sshfs.SSHFSConnect"><code class="xref py py-class docutils literal notranslate"><span class="pre">SSHFSConnect</span></code></a>) are configurable via the <a class="reference external" href="https://traitlets.readthedocs.io/en/stable/config.html">traitlets</a> mechanism, i.e. they can be set via a config file, <code class="docutils literal notranslate"><span class="pre">__init__</span></code> arguments, or <a class="reference external" href="https://traitlets.readthedocs.io/en/stable/config.html#command-line-arguments">the command line</a>.
+Downloading of the remote files imported in a python session to the local filesystem is also supported via the <code class="xref py py-attr docutils literal notranslate"><span class="pre">download</span></code> trait (arguments to <a class="reference internal" href="#condor.enable_sshfs_import" title="condor.enable_sshfs_import"><code class="xref py py-func docutils literal notranslate"><span class="pre">enable_sshfs_import()</span></code></a> will be handed up to <a class="reference internal" href="#condor.sshfs.SSHFSConnect" title="condor.sshfs.SSHFSConnect"><code class="xref py py-class docutils literal notranslate"><span class="pre">SSHFSConnect</span></code></a>).</p>
+<div class="section" id="script-running">
+<h4>Script Running<a class="headerlink" href="#script-running" title="Permalink to this headline">¶</a></h4>
+<p>Running scripts is supported via the <code class="xref py py-class docutils literal notranslate"><span class="pre">SSHFSRunner</span></code> class, which uses the <a class="reference external" href="https://traitlets.readthedocs.io/en/stable/config.html#subcommands">subcommand</a> mechanism. Subcommands can be configured via a file, either loaded via sshfs or locally. To use the runner, simply execute this file as a script with the desired subcommand and command-line options.</p>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
 <p class="last">While <a class="reference external" href="https://github.com/althonos/fs.sshfs">fs.sshfs</a> honors the ssh config file (can be given as parameter <code class="docutils literal notranslate"><span class="pre">config_path</span></code>), at present, it doesn’t seem to be working with proxy setups (however, in that case one can still set up local port forwarding and connect to localhost instead).</p>
 </div>
 <dl class="class">
-<dt id="condor.sshfs.sshfsConnect">
-<em class="property">class </em><code class="descclassname">condor.sshfs.</code><code class="descname">sshfsConnect</code><span class="sig-paren">(</span><em>host=None</em>, <em>user=None</em>, <em>port=None</em>, <em>folder=None</em>, <em>download=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/condor/sshfs.html#sshfsConnect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#condor.sshfs.sshfsConnect" title="Permalink to this definition">¶</a></dt>
-<dd><p>Connection instance used by <a class="reference internal" href="#condor.sshfs.sshfsImporter" title="condor.sshfs.sshfsImporter"><code class="xref py py-class docutils literal notranslate"><span class="pre">sshfsImporter</span></code></a>.</p>
+<dt id="condor.sshfs.SSHFSConnect">
+<em class="property">class </em><code class="descclassname">condor.sshfs.</code><code class="descname">SSHFSConnect</code><span class="sig-paren">(</span><em>*args</em>, <em>sshfs_kw={}</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/condor/sshfs.html#SSHFSConnect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#condor.sshfs.SSHFSConnect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Connection instance used by <a class="reference internal" href="#condor.sshfs.SSHFSImporter" title="condor.sshfs.SSHFSImporter"><code class="xref py py-class docutils literal notranslate"><span class="pre">SSHFSImporter</span></code></a>.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name" colspan="2">Keyword arguments:</th></tr>
-<tr class="field-odd field"><td>&#160;</td><td class="field-body"><ul class="first simple">
-<li><strong>host</strong> - hostname (localhost in case of port forwarding)</li>
-<li><strong>user</strong> - username</li>
-<li><strong>port</strong> - port</li>
-<li><strong>path</strong> - folder on host machine where to root the import statements</li>
-<li><strong>download</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.7)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a>) - whether or not to download the imported files to the local filesystem (right now, it will download the directory tree to the folder from which executed)</li>
-</ul>
-<p>All arguments that are not given will be searched for in the <code class="xref py py-data docutils literal notranslate"><span class="pre">python.data.config</span></code> values.</p>
-<p class="last">Further kwargs are handed over to the <a class="reference external" href="https://github.com/althonos/fs.sshfs">fs.sshfs.SSHFS</a> instantiation.</p>
-</td>
+<tr class="field-odd field"><td>&#160;</td><td class="field-body">All of these can also be set via a config file or command-line args (see module docstring)
+* <a class="reference internal" href="#condor.sshfs.SSHFSConnect.host" title="condor.sshfs.SSHFSConnect.host"><code class="xref py py-attr docutils literal notranslate"><span class="pre">host</span></code></a>
+* <a class="reference internal" href="#condor.sshfs.SSHFSConnect.user" title="condor.sshfs.SSHFSConnect.user"><code class="xref py py-attr docutils literal notranslate"><span class="pre">user</span></code></a>
+* <a class="reference internal" href="#condor.sshfs.SSHFSConnect.port" title="condor.sshfs.SSHFSConnect.port"><code class="xref py py-attr docutils literal notranslate"><span class="pre">port</span></code></a>
+* <a class="reference internal" href="#condor.sshfs.SSHFSConnect.path" title="condor.sshfs.SSHFSConnect.path"><code class="xref py py-attr docutils literal notranslate"><span class="pre">path</span></code></a>
+* <a class="reference internal" href="#condor.sshfs.SSHFSConnect.download" title="condor.sshfs.SSHFSConnect.download"><code class="xref py py-attr docutils literal notranslate"><span class="pre">download</span></code></a></td>
 </tr>
 </tbody>
 </table>
+<dl class="attribute">
+<dt id="condor.sshfs.SSHFSConnect.download">
+<code class="descname">download</code><a class="headerlink" href="#condor.sshfs.SSHFSConnect.download" title="Permalink to this definition">¶</a></dt>
+<dd><p>whether or not to download the imported files to the local filesystem (right now, it will download the directory tree to the folder from which executed)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="condor.sshfs.SSHFSConnect.host">
+<code class="descname">host</code><a class="headerlink" href="#condor.sshfs.SSHFSConnect.host" title="Permalink to this definition">¶</a></dt>
+<dd><p>sshfs hostname (localhost in case of port forwarding)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="condor.sshfs.SSHFSConnect.path">
+<code class="descname">path</code><a class="headerlink" href="#condor.sshfs.SSHFSConnect.path" title="Permalink to this definition">¶</a></dt>
+<dd><p>path on host from which the import statements should be executed</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="condor.sshfs.SSHFSConnect.port">
+<code class="descname">port</code><a class="headerlink" href="#condor.sshfs.SSHFSConnect.port" title="Permalink to this definition">¶</a></dt>
+<dd><p>sshfs port (possibly forwarded one)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="condor.sshfs.SSHFSConnect.user">
+<code class="descname">user</code><a class="headerlink" href="#condor.sshfs.SSHFSConnect.user" title="Permalink to this definition">¶</a></dt>
+<dd><p>sshfs username</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="class">
-<dt id="condor.sshfs.sshfsImporter">
-<em class="property">class </em><code class="descclassname">condor.sshfs.</code><code class="descname">sshfsImporter</code><span class="sig-paren">(</span><em>host=None</em>, <em>user=None</em>, <em>port=None</em>, <em>folder=None</em>, <em>download=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/condor/sshfs.html#sshfsImporter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#condor.sshfs.sshfsImporter" title="Permalink to this definition">¶</a></dt>
-<dd><p>Class to import code directly via a ssh connection (with local port forwarded) by means of a regular import statement. Added to <a class="reference external" href="https://docs.python.org/3/library/sys.html#sys.meta_path" title="(in Python v3.7)"><code class="xref py py-data docutils literal notranslate"><span class="pre">sys.meta_path</span></code></a> via the <a class="reference internal" href="#condor.enable_sshfs_import" title="condor.enable_sshfs_import"><code class="xref py py-func docutils literal notranslate"><span class="pre">enable_sshfs_import()</span></code></a> method of the <a class="reference internal" href="#module-condor" title="condor"><code class="xref py py-mod docutils literal notranslate"><span class="pre">condor</span></code></a> package. All parameters given to that method are handed to <a class="reference internal" href="#condor.sshfs.sshfsConnect" title="condor.sshfs.sshfsConnect"><code class="xref py py-class docutils literal notranslate"><span class="pre">sshfsConnect</span></code></a>, where they are described.</p>
+<dt id="condor.sshfs.SSHFSImporter">
+<em class="property">class </em><code class="descclassname">condor.sshfs.</code><code class="descname">SSHFSImporter</code><span class="sig-paren">(</span><em>*args</em>, <em>sshfs_kw={}</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/condor/sshfs.html#SSHFSImporter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#condor.sshfs.SSHFSImporter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to import code directly via a ssh connection (with local port forwarded) by means of a regular import statement. Added to <a class="reference external" href="https://docs.python.org/3/library/sys.html#sys.meta_path" title="(in Python v3.7)"><code class="xref py py-data docutils literal notranslate"><span class="pre">sys.meta_path</span></code></a> via the <a class="reference internal" href="#condor.enable_sshfs_import" title="condor.enable_sshfs_import"><code class="xref py py-func docutils literal notranslate"><span class="pre">enable_sshfs_import()</span></code></a> method of the <a class="reference internal" href="#module-condor" title="condor"><code class="xref py py-mod docutils literal notranslate"><span class="pre">condor</span></code></a> package. All parameters are described under <a class="reference internal" href="#condor.sshfs.SSHFSConnect" title="condor.sshfs.SSHFSConnect"><code class="xref py py-class docutils literal notranslate"><span class="pre">SSHFSConnect</span></code></a>.</p>
 </dd></dl>
 
+</div>
 </div>
 <span class="target" id="module-condor.github"></span><div class="section" id="github">
 <h3>GitHub<a class="headerlink" href="#github" title="Permalink to this headline">¶</a></h3>
@@ -170,7 +201,10 @@
   <ul>
 <li><a class="reference internal" href="#">Condor (remote files and MPI)</a><ul>
 <li><a class="reference internal" href="#remote-imports">Remote imports</a><ul>
-<li><a class="reference internal" href="#sshfs">SSHFS</a></li>
+<li><a class="reference internal" href="#sshfs">SSHFS</a><ul>
+<li><a class="reference internal" href="#script-running">Script Running</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#github">GitHub</a></li>
 </ul>
 </li>
