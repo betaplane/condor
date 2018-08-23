@@ -19,10 +19,12 @@ Downloading of the remote files imported in a python session to the local filesy
 """
 from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec
+from traitlets.config import Application
+from traitlets import Unicode, Integer, Bool
 from fs.sshfs import SSHFS
 import sys, os
 
-class sshfsConnect(object):
+class sshfsConnect(Application):
     """Connection instance used by :class:`.sshfsImporter`.
 
     :Keyword arguments:
@@ -37,22 +39,19 @@ class sshfsConnect(object):
         Further kwargs are handed over to the `fs.sshfs.SSHFS <sshfs_>`_ instantiation.
 
     """
-    def __init__(self, host=None, user=None, port=None, folder=None, download=False, **kwargs):
-        if not all((host, user, port, folder)):
-            if 'cezar' not in globals():
-                import runpy
-                fs = runpy.run_path(os.path.expanduser(os.environ['PYTHONSTARTUP']))['cezar']['sshfs']
-            else:
-                fs = cezar['sshfs']
 
-        self.host = fs['host'] if host is None else host
-        self.user = fs['user'] if user is None else user
-        self.port = fs['port'] if port is None else port
-        self.path = fs['path'] if folder is None else folder
-        self.sshfs = SSHFS(self.host, self.user, port=self.port, **kwargs)
-        self.base_folder = [os.path.splitext(f)[0] for f in self.sshfs.listdir(self.path)]
-        self.nodes = {}
-        self._dl = download
+    host = Unicode('localhost').tag(config=True)
+    user = Unicode().tag(config=True)
+    port = Integer().tag(config=True)
+    path = Unicode().tag(config=True)
+    download = Bool(False).tag(config=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.load_config_file('config.py', os.path.dirname(__file__))
+        # self.sshfs = SSHFS(self.host, self.user, port=self.port, **sshfs_kw)
+        # self.base_folder = [os.path.splitext(f)[0] for f in self.sshfs.listdir(self.path)]
+        # self.nodes = {}
 
 class sshfsImporter(sshfsConnect):
     """Class to import code directly via a ssh connection (with local port forwarded) by means of a regular import statement. Added to :data:`sys.meta_path` via the :func:`.enable_sshfs_import` method of the :mod:`condor` package. All parameters given to that method are handed to :class:`.sshfsConnect`, where they are described.
@@ -97,7 +96,7 @@ class sshfsImporter(sshfsConnect):
             with self.sshfs.open(mod.__file__) as f:
                 s = f.read()
                 exec(s, mod.__dict__)
-                if self._dl:
+                if self.download:
                     import pathlib as pl
                     p = pl.Path('.{}'.format(mod.__file__[len(self.path):]))
                     mod.__file__ = p.as_posix()
