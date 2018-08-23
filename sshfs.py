@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 SSHFS
 -----
@@ -19,13 +20,14 @@ Downloading of the remote files imported in a python session to the local filesy
 """
 from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec
+from importlib import import_module
 from traitlets.config import Application
-from traitlets import Unicode, Integer, Bool
+from traitlets import Unicode, Integer, Bool, Dict
 from fs.sshfs import SSHFS
 import sys, os
 
-class sshfsConnect(Application):
-    """Connection instance used by :class:`.sshfsImporter`.
+class SSHFSConnect(Application):
+    """Connection instance used by :class:`.SSHFSImporter`.
 
     :Keyword arguments:
         * **host** - hostname (localhost in case of port forwarding)
@@ -39,24 +41,25 @@ class sshfsConnect(Application):
         Further kwargs are handed over to the `fs.sshfs.SSHFS <sshfs_>`_ instantiation.
 
     """
-
     host = Unicode('localhost').tag(config=True)
     user = Unicode().tag(config=True)
     port = Integer().tag(config=True)
     path = Unicode().tag(config=True)
     download = Bool(False).tag(config=True)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, sshfs_kw={}, **kwargs):
         super().__init__(*args, **kwargs)
         self.load_config_file('config.py', os.path.dirname(__file__))
-        # self.sshfs = SSHFS(self.host, self.user, port=self.port, **sshfs_kw)
-        # self.base_folder = [os.path.splitext(f)[0] for f in self.sshfs.listdir(self.path)]
-        # self.nodes = {}
+        self.sshfs = SSHFS(self.host, self.user, port=self.port, **sshfs_kw)
+        self.base_folder = [os.path.splitext(f)[0] for f in self.sshfs.listdir(self.path)]
+        self.nodes = {}
 
-class sshfsImporter(sshfsConnect):
-    """Class to import code directly via a ssh connection (with local port forwarded) by means of a regular import statement. Added to :data:`sys.meta_path` via the :func:`.enable_sshfs_import` method of the :mod:`condor` package. All parameters given to that method are handed to :class:`.sshfsConnect`, where they are described.
+class SSHFSImporter(SSHFSConnect):
+    """Class to import code directly via a ssh connection (with local port forwarded) by means of a regular import statement. Added to :data:`sys.meta_path` via the :func:`.enable_sshfs_import` method of the :mod:`condor` package. All parameters given to that method are handed to :class:`.SSHFSConnect`, where they are described.
 
     """
+    _id = 'condor.SSHFSImporter' # hack to overcome isinstance problems
+
     def find_spec(self, fullname, path, targ=None):
         self.names = fullname.split('.')
         if path is None and fullname in self.base_folder:
@@ -114,24 +117,62 @@ class sshfsImporter(sshfsConnect):
         print('reloaded {} from sshfs host {}'.format(module.__name__, self.host))
 
     def __del__(self):
-        self.sshfs.close()
+        try:
+            self.sshfs.close()
+        except: pass
 
+class SSHFSImportDisabled(Exception):
+    pass
 
 def enable_sshfs_import(*args, **kwargs):
-    """Call once in order to enable the direct import of modules from text files on a :mod:`fs.sshfs` filesystem. This inserts an instance of :class:`~.sshfs.sshfsImporter` into the beginning of :data:`sys.meta_path`. All arguments are directly passed to :class:`~.sshfs.sshfsConnect`.
+    """Call once in order to enable the direct import of modules from text files on a :mod:`fs.sshfs` filesystem. This inserts an instance of :class:`~.sshfs.SSHFSImporter` into the beginning of :data:`sys.meta_path`. All arguments are directly passed to :class:`~.sshfs.SSHFSConnect`.
 
     """
     # NOTE: appending the loader works in normal ipython, but trips up in jupyter notebooks
     # (presumably because loaders earlier in the path return something unwanted)
-    sys.meta_path.insert(0, sshfsImporter(*args, **kwargs))
+    try:
+        disable_sshfs_import()
+    except SSHFSImportDisabled: pass
+    finally:
+        sys.meta_path.insert(0, SSHFSImporter(*args, **kwargs))
 
 def disable_sshfs_import():
     """Remove all instances of :class:`~.github.GithubImporter` from :data:`sys.meta_path`, thereby disabling the direct import of modules from a GitHub repo.
 
     """
-    for mod in [m for m in sys.meta_path if isinstance(m, sshfsImporter)]:
-        mod.sshfs.close() # to be on the safe side
-        sys.meta_path.remove(mod)
+    for m in sys.meta_path:
+        try:
+            if m._id == 'condor.SSHFSImporter':
+                mod.sshfs.close() # to be on the safe side
+                sys.meta_path.remove(mod)
+        except: raise SSHFSImportDisabled
 
-def update_local_startup():
-    pass
+def get_sshfs():
+    for m in sys.meta_path:
+        try:
+            if m._id == 'condor.SSHFSImporter':
+                return m.sshfs
+        except: pass
+    raise SSHFSImportDisabled('no SSHFSImporter installed, run enable_sshfs_import() first')
+
+
+class SSHFSRunner(Application):
+    subcommands = Dict().tag(config=True)
+    sshfs_config = Unicode().tag(config=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args,  **kwargs)
+        self.load_config_file('config.py', os.path.dirname(os.path.realpath(__file__)))
+        loader = import_module('traitlets.config.loader')
+        c = loader.ConfigLoader()
+        c.clear() # creates config instance
+        exec(get_sshfs().open(self.sshfs_config).read(),
+             {'c': c.config, 'get_config': lambda: c.config})
+        self.update_config(c.config)
+
+
+if __name__ == '__main__':
+    enable_sshfs_import()
+    app = SSHFSRunner()
+    app.parse_command_line()
+    app.subapp.start()
