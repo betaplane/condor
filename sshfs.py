@@ -35,12 +35,14 @@ import sys, os
 class SSHFSConnect(Application):
     """Connection instance used by :class:`.SSHFSImporter`.
 
+    All of the kwargs can also be set via a config file or command-line args (see module docstring).
+
     :Keyword arguments:
-        All of these can also be set via a config file or command-line args (see module docstring)
         * :attr:`host`
         * :attr:`user`
         * :attr:`port`
         * :attr:`path`
+        * :attr:`sshfs_kw`
         * :attr:`download`
 
     """
@@ -53,16 +55,21 @@ class SSHFSConnect(Application):
     port = Integer().tag(config=True)
     """sshfs port (possibly forwarded one)"""
 
+    sshfs_kw = Dict().tag(config=True)
+    """additional keyword arguments to :class:`fs.sshfs.SSHFS`, as dict"""
+
     path = Unicode().tag(config=True)
     """path on host from which the import statements should be executed"""
 
     download = Bool(False).tag(config=True)
     """whether or not to download the imported files to the local filesystem (right now, it will download the directory tree to the folder from which executed)"""
 
-    def __init__(self, *args, sshfs_kw={}, **kwargs):
+    aliases = {'p': 'SSHFSConnect.port', 'kw': 'SSHFSConnect.sshfs_kw'}
+
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.load_config_file('config.py', os.path.dirname(__file__))
-        self.sshfs = SSHFS(self.host, self.user, port=self.port, **sshfs_kw)
+        self.sshfs = SSHFS(self.host, self.user, port=self.port, **self.sshfs_kw)
         self.base_folder = [os.path.splitext(f)[0] for f in self.sshfs.listdir(self.path)]
         self.nodes = {}
 
