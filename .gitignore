@@ -4,5 +4,4 @@ _templates
 _sources
 doctrees
 .buildinfo
-*.inv
 !/docs/_static

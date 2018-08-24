@@ -28,9 +28,10 @@ from importlib.machinery import ModuleSpec
 from importlib.util import module_from_spec
 from importlib import import_module
 from traitlets.config import Application
+from traitlets.config.loader import PyFileConfigLoader
 from traitlets import Unicode, Integer, Bool, Dict
 from fs.sshfs import SSHFS
-import sys, os
+import sys, os, re
 
 class SSHFSConnect(Application):
     """Connection instance used by :class:`.SSHFSImporter`.
@@ -42,7 +43,7 @@ class SSHFSConnect(Application):
         * :attr:`user`
         * :attr:`port`
         * :attr:`path`
-        * :attr:`sshfs_kw`
+        * :attr:`pkey`
         * :attr:`download`
 
     """
@@ -55,8 +56,8 @@ class SSHFSConnect(Application):
     port = Integer().tag(config=True)
     """sshfs port (possibly forwarded one)"""
 
-    sshfs_kw = Dict().tag(config=True)
-    """additional keyword arguments to :class:`fs.sshfs.SSHFS`, as dict"""
+    pkey = Unicode().tag(config=True)
+    """pkey parameter to :class:`fs.sshfs.SSHFS`"""
 
     path = Unicode().tag(config=True)
     """path on host from which the import statements should be executed"""
@@ -64,12 +65,13 @@ class SSHFSConnect(Application):
     download = Bool(False).tag(config=True)
     """whether or not to download the imported files to the local filesystem (right now, it will download the directory tree to the folder from which executed)"""
 
-    aliases = {'p': 'SSHFSConnect.port', 'kw': 'SSHFSConnect.sshfs_kw'}
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.load_config_file('config.py', os.path.dirname(__file__))
-        self.sshfs = SSHFS(self.host, self.user, port=self.port, **self.sshfs_kw)
+        config = PyFileConfigLoader('config.py', os.path.dirname(os.path.realpath(__file__))).load_config()
+        if 'config' in kwargs:
+            config.merge(kwargs.pop('config', {}))
+        super().__init__(*args, config=config, **kwargs)
+        self.sshfs = SSHFS(self.host, self.user, port=self.port, pkey=None if self.pkey=='' else self.pkey)
         self.base_folder = [os.path.splitext(f)[0] for f in self.sshfs.listdir(self.path)]
         self.nodes = {}
 
@@ -131,7 +133,7 @@ class SSHFSImporter(SSHFSConnect):
         return mod
 
     def reload(self, module):
-        with self.sshfs.open(module.__file__) as f:
+        with self.sshfs.open(os.path.join(self.path, module.__file__)) as f:
             exec(f.read(), module.__dict__)
         print('reloaded {} from sshfs host {}'.format(module.__name__, self.host))
 
@@ -177,20 +179,30 @@ def get_sshfs():
 
 
 class SSHFSRunner(Application):
-    """Script runner class with loads a class as a traitlet subcommand via sshfs and executes its :meth:`start` method. Mostly inteded to be run as a command-line application - it is the entry point when this file is run as a script."""
+    """Script runner class with loads a class as a traitlet subcommand via sshfs and executes its :meth:`start` method. Mostly inteded to be run as a command-line application - it is the entry point when this file is run as a script.
+
+    **All arguments before '--' pertain to this class, and all arguments after '--' pertain to the class being run as subcommand.**
+
+    """
 
     subcommands = Dict().tag(config=True)
     """Subcommands defined as a mapping <command: class>, with the class being loadable via sshfs."""
 
     sshfs_config = Unicode().tag(config=True)
-    """Config file path on the target sshfs host, if needed. Subcommands can also be defined here."""
+    """Config file path on the target sshfs host, if needed. Subcommands can also be defined here. This is different from the local config file - it's only available on the remote side."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args,  **kwargs)
+    aliases = {'p': 'SSHFSConnect.port', 'key': 'SSHFSConnect.pkey', 'cfg': 'SSHFSRunner.sshfs_config'}
+
+    def __init__(self):
+        super().__init__()
         self.load_config_file('config.py', os.path.dirname(os.path.realpath(__file__)))
 
     def initialize(self):
-        app.parse_command_line()
+        # for SSHFSRunner app
+        scmd, args = [], sys.argv[1:]
+        if re.match('^\w(\-?\w)*$', args[0]):
+            scmd.append(args.pop(0))
+        self.parse_command_line(args)
         imptr = SSHFSImporter(config=self.config)
         sys.meta_path.insert(0, imptr)
         if self.sshfs_config != '':
@@ -200,7 +212,9 @@ class SSHFSRunner(Application):
             exec(imptr.sshfs.open(self.sshfs_config).read(),
                  {'c': c.config, 'get_config': lambda: c.config})
             self.update_config(c.config)
-
+        # for subapp
+        scmd.extend(self.extra_args)
+        self.parse_command_line(scmd)
 
 if __name__ == '__main__':
     app = SSHFSRunner()
