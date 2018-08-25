@@ -11,7 +11,7 @@ Import machinery to load code directly over a ssh connection (either one initiat
     condor.enable_sshfs_import(port=...)
 
 All parameters (see :class:`SSHFSConnect`) are configurable via the `traitlets  <https://traitlets.readthedocs.io/en/stable/config.html>`_ mechanism, i.e. they can be set via a config file, ``__init__`` arguments, or `the command line <https://traitlets.readthedocs.io/en/stable/config.html#command-line-arguments>`_.
-Downloading of the remote files imported in a python session to the local filesystem is also supported via the :attr:`download` trait (arguments to :func:`.enable_sshfs_import` will be handed up to :class:`SSHFSConnect`).
+Downloading of the remote files imported in a python session to the local filesystem is also supported via the :attr:`.SSHFSConnect.download` trait (arguments to :func:`.enable_sshfs_import` will be handed up to :class:`SSHFSConnect`).
 
 Script Running
 ==============
