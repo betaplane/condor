@@ -70,12 +70,14 @@
 <div class="viewcode-block" id="SSHFSConnect"><a class="viewcode-back" href="../../condor.html#condor.SSHFSConnect">[docs]</a><span class="k">class</span> <span class="nc">SSHFSConnect</span><span class="p">(</span><span class="n">Application</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Connection instance used by :class:`.SSHFSImporter`.</span>
 
+<span class="sd">    All of the kwargs can also be set via a config file or command-line args (see module docstring).</span>
+
 <span class="sd">    :Keyword arguments:</span>
-<span class="sd">        All of these can also be set via a config file or command-line args (see module docstring)</span>
 <span class="sd">        * :attr:`host`</span>
 <span class="sd">        * :attr:`user`</span>
 <span class="sd">        * :attr:`port`</span>
 <span class="sd">        * :attr:`path`</span>
+<span class="sd">        * :attr:`sshfs_kw`</span>
 <span class="sd">        * :attr:`download`</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -88,16 +90,21 @@
     <span class="n">port</span> <span class="o">=</span> <span class="n">Integer</span><span class="p">()</span><span class="o">.</span><span class="n">tag</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="sd">&quot;&quot;&quot;sshfs port (possibly forwarded one)&quot;&quot;&quot;</span>
 
+    <span class="n">sshfs_kw</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">()</span><span class="o">.</span><span class="n">tag</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="sd">&quot;&quot;&quot;additional keyword arguments to :class:`fs.sshfs.SSHFS`, as dict&quot;&quot;&quot;</span>
+
     <span class="n">path</span> <span class="o">=</span> <span class="n">Unicode</span><span class="p">()</span><span class="o">.</span><span class="n">tag</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="sd">&quot;&quot;&quot;path on host from which the import statements should be executed&quot;&quot;&quot;</span>
 
     <span class="n">download</span> <span class="o">=</span> <span class="n">Bool</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">tag</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="sd">&quot;&quot;&quot;whether or not to download the imported files to the local filesystem (right now, it will download the directory tree to the folder from which executed)&quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">sshfs_kw</span><span class="o">=</span><span class="p">{},</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">aliases</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;p&#39;</span><span class="p">:</span> <span class="s1">&#39;SSHFSConnect.port&#39;</span><span class="p">,</span> <span class="s1">&#39;kw&#39;</span><span class="p">:</span> <span class="s1">&#39;SSHFSConnect.sshfs_kw&#39;</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">load_config_file</span><span class="p">(</span><span class="s1">&#39;config.py&#39;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">sshfs</span> <span class="o">=</span> <span class="n">SSHFS</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="o">**</span><span class="n">sshfs_kw</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sshfs</span> <span class="o">=</span> <span class="n">SSHFS</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">sshfs_kw</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">base_folder</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">f</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sshfs</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span> <span class="o">=</span> <span class="p">{}</span></div>
 

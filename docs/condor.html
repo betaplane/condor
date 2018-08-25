@@ -94,19 +94,23 @@ Downloading of the remote files imported in a python session to the local filesy
 </div>
 <dl class="class">
 <dt id="condor.sshfs.SSHFSConnect">
-<em class="property">class </em><code class="descclassname">condor.sshfs.</code><code class="descname">SSHFSConnect</code><span class="sig-paren">(</span><em>*args</em>, <em>sshfs_kw={}</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/condor/sshfs.html#SSHFSConnect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#condor.sshfs.SSHFSConnect" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">condor.sshfs.</code><code class="descname">SSHFSConnect</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/condor/sshfs.html#SSHFSConnect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#condor.sshfs.SSHFSConnect" title="Permalink to this definition">¶</a></dt>
 <dd><p>Connection instance used by <a class="reference internal" href="#condor.sshfs.SSHFSImporter" title="condor.sshfs.SSHFSImporter"><code class="xref py py-class docutils literal notranslate"><span class="pre">SSHFSImporter</span></code></a>.</p>
+<p>All of the kwargs can also be set via a config file or command-line args (see module docstring).</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name" colspan="2">Keyword arguments:</th></tr>
-<tr class="field-odd field"><td>&#160;</td><td class="field-body">All of these can also be set via a config file or command-line args (see module docstring)
-* <a class="reference internal" href="#condor.sshfs.SSHFSConnect.host" title="condor.sshfs.SSHFSConnect.host"><code class="xref py py-attr docutils literal notranslate"><span class="pre">host</span></code></a>
-* <a class="reference internal" href="#condor.sshfs.SSHFSConnect.user" title="condor.sshfs.SSHFSConnect.user"><code class="xref py py-attr docutils literal notranslate"><span class="pre">user</span></code></a>
-* <a class="reference internal" href="#condor.sshfs.SSHFSConnect.port" title="condor.sshfs.SSHFSConnect.port"><code class="xref py py-attr docutils literal notranslate"><span class="pre">port</span></code></a>
-* <a class="reference internal" href="#condor.sshfs.SSHFSConnect.path" title="condor.sshfs.SSHFSConnect.path"><code class="xref py py-attr docutils literal notranslate"><span class="pre">path</span></code></a>
-* <a class="reference internal" href="#condor.sshfs.SSHFSConnect.download" title="condor.sshfs.SSHFSConnect.download"><code class="xref py py-attr docutils literal notranslate"><span class="pre">download</span></code></a></td>
+<tr class="field-odd field"><td>&#160;</td><td class="field-body"><ul class="first last simple">
+<li><a class="reference internal" href="#condor.sshfs.SSHFSConnect.host" title="condor.sshfs.SSHFSConnect.host"><code class="xref py py-attr docutils literal notranslate"><span class="pre">host</span></code></a></li>
+<li><a class="reference internal" href="#condor.sshfs.SSHFSConnect.user" title="condor.sshfs.SSHFSConnect.user"><code class="xref py py-attr docutils literal notranslate"><span class="pre">user</span></code></a></li>
+<li><a class="reference internal" href="#condor.sshfs.SSHFSConnect.port" title="condor.sshfs.SSHFSConnect.port"><code class="xref py py-attr docutils literal notranslate"><span class="pre">port</span></code></a></li>
+<li><a class="reference internal" href="#condor.sshfs.SSHFSConnect.path" title="condor.sshfs.SSHFSConnect.path"><code class="xref py py-attr docutils literal notranslate"><span class="pre">path</span></code></a></li>
+<li><a class="reference internal" href="#condor.sshfs.SSHFSConnect.sshfs_kw" title="condor.sshfs.SSHFSConnect.sshfs_kw"><code class="xref py py-attr docutils literal notranslate"><span class="pre">sshfs_kw</span></code></a></li>
+<li><a class="reference internal" href="#condor.sshfs.SSHFSConnect.download" title="condor.sshfs.SSHFSConnect.download"><code class="xref py py-attr docutils literal notranslate"><span class="pre">download</span></code></a></li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
@@ -135,6 +139,12 @@ Downloading of the remote files imported in a python session to the local filesy
 </dd></dl>
 
 <dl class="attribute">
+<dt id="condor.sshfs.SSHFSConnect.sshfs_kw">
+<code class="descname">sshfs_kw</code><a class="headerlink" href="#condor.sshfs.SSHFSConnect.sshfs_kw" title="Permalink to this definition">¶</a></dt>
+<dd><p>additional keyword arguments to <code class="xref py py-class docutils literal notranslate"><span class="pre">fs.sshfs.SSHFS</span></code>, as dict</p>
+</dd></dl>
+
+<dl class="attribute">
 <dt id="condor.sshfs.SSHFSConnect.user">
 <code class="descname">user</code><a class="headerlink" href="#condor.sshfs.SSHFSConnect.user" title="Permalink to this definition">¶</a></dt>
 <dd><p>sshfs username</p>
@@ -144,7 +154,7 @@ Downloading of the remote files imported in a python session to the local filesy
 
 <dl class="class">
 <dt id="condor.sshfs.SSHFSImporter">
-<em class="property">class </em><code class="descclassname">condor.sshfs.</code><code class="descname">SSHFSImporter</code><span class="sig-paren">(</span><em>*args</em>, <em>sshfs_kw={}</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/condor/sshfs.html#SSHFSImporter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#condor.sshfs.SSHFSImporter" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">condor.sshfs.</code><code class="descname">SSHFSImporter</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/condor/sshfs.html#SSHFSImporter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#condor.sshfs.SSHFSImporter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class to import code directly via a ssh connection (with local port forwarded) by means of a regular import statement. Added to <a class="reference external" href="https://docs.python.org/3/library/sys.html#sys.meta_path" title="(in Python v3.7)"><code class="xref py py-data docutils literal notranslate"><span class="pre">sys.meta_path</span></code></a> via the <a class="reference internal" href="#condor.enable_sshfs_import" title="condor.enable_sshfs_import"><code class="xref py py-func docutils literal notranslate"><span class="pre">enable_sshfs_import()</span></code></a> method of the <a class="reference internal" href="#module-condor" title="condor"><code class="xref py py-mod docutils literal notranslate"><span class="pre">condor</span></code></a> package. All parameters are described under <a class="reference internal" href="#condor.sshfs.SSHFSConnect" title="condor.sshfs.SSHFSConnect"><code class="xref py py-class docutils literal notranslate"><span class="pre">SSHFSConnect</span></code></a>.</p>
 </dd></dl>
 
